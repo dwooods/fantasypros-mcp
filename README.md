@@ -18,6 +18,39 @@ appears in chat, source control, or client config again.
   is truncated on the free tier, rankings lists aren't)
 - `get_projections` — weekly or season-long fantasy point projections
 
+## How it works
+
+```mermaid
+sequenceDiagram
+    participant C as Claude (MCP client)
+    participant W as Worker (fantasypros-mcp)
+    participant KV as Workers KV (FP_CACHE)
+    participant FP as FantasyPros API
+
+    C->>W: tool call over /mcp<br/>header x-api-key: MCP_AUTH_TOKEN
+    alt key doesn't match MCP_AUTH_TOKEN
+        W-->>C: 401 Unauthorized
+    else key valid
+        W->>KV: get(cacheKey)
+        alt cache HIT
+            KV-->>W: cached JSON
+        else cache MISS
+            W->>FP: GET /public/v2/...<br/>header x-api-key: FANTASYPROS_API_KEY
+            FP-->>W: JSON
+            W->>KV: put(cacheKey, JSON, ttl)
+        end
+        W-->>C: tool result
+    end
+```
+
+Two different `x-api-key` headers are in play here and it's easy to
+conflate them: the **inbound** one (Claude → Worker) is checked against
+`MCP_AUTH_TOKEN` and just gates the Worker so it isn't an open proxy; the
+**outbound** one (Worker → FantasyPros) is your actual `FANTASYPROS_API_KEY`
+and is what FantasyPros bills against. The KV cache sits in between so a
+cache HIT never touches FantasyPros (and doesn't count against your
+50-requests/day free-tier quota) — only a MISS does.
+
 ## 1. Prerequisites
 
 - Node.js 18+
