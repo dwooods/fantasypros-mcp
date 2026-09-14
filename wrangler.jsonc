@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fantasypros-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Durable Objects back the MCP session (McpAgent keeps per-connection state here).
+  "durable_objects": {
+    "bindings": [
+      { "name": "MCP_OBJECT", "class_name": "FantasyProsMCP" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["FantasyProsMCP"] }
+  ],
+
+  // KV cache fronting the FantasyPros API (see fpFetch in src/index.ts).
+  "kv_namespaces": [
+    { "binding": "FP_CACHE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }
+  ]
+
+  // Secrets (NOT set here — set via `wrangler secret put <NAME>` so they never
+  // land in source control):
+  //   FANTASYPROS_API_KEY  — your FantasyPros API key
+  //   MCP_AUTH_TOKEN       — a random token you invent, used to lock this
+  //                          Worker down so it isn't an open proxy for your key
+}

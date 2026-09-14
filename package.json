@@ -1,0 +1,20 @@
+{
+  "name": "fantasypros-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "secrets": "echo 'Run: wrangler secret put FANTASYPROS_API_KEY   and   wrangler secret put MCP_AUTH_TOKEN'"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "agents": "^0.0.65",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "wrangler": "^3.90.0",
+    "@cloudflare/workers-types": "^4.20250101.0"
+  }
+}
