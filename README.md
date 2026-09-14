@@ -21,7 +21,9 @@ appears in chat, source control, or client config again.
 ## 1. Prerequisites
 
 - Node.js 18+
-- A free Cloudflare account
+- A free Cloudflare account — sign up at https://dash.cloudflare.com/sign-up
+  if you don't have one. No credit card needed for what this project uses
+  (Workers + KV free tiers).
 - Your FantasyPros API key (from https://secure.fantasypros.com/api-keys/)
 
 ## 2. Install
@@ -30,6 +32,22 @@ appears in chat, source control, or client config again.
 npm install
 npx wrangler login
 ```
+
+`wrangler login` opens your browser and asks you to approve access to your
+Cloudflare account (an OAuth consent screen) — log in there if you aren't
+already, click Allow, and come back to the terminal. This is a one-time
+step per machine; Wrangler caches the token afterward.
+
+**If this is a brand-new Cloudflare account with no Workers deployed yet**,
+visit the Workers & Pages section of the dashboard
+(https://dash.cloudflare.com → **Workers & Pages**) once before continuing.
+Loading that page the first time is what provisions your account's
+`workers.dev` subdomain (e.g. `yourname.workers.dev`), which `wrangler
+deploy` needs in step 5. Skipping this isn't fatal — Wrangler will usually
+prompt you to pick a subdomain interactively during deploy instead — but on
+some account states it fails outright with `You need a workers.dev
+subdomain in order to proceed` and no direct link to fix it, so it's faster
+to just visit the dashboard once up front.
 
 ## 3. Set secrets
 
@@ -84,6 +102,13 @@ npx wrangler deploy
 This prints your Worker's URL, something like:
 `https://fantasypros-mcp.<your-subdomain>.workers.dev`
 
+If you skipped the dashboard visit in step 2 and this is your first Worker
+ever, Wrangler may prompt you here to choose a `workers.dev` subdomain — or,
+on some accounts, fail with `You need a workers.dev subdomain in order to
+proceed`. If you hit that error, go to
+**dash.cloudflare.com → Workers & Pages**, let the page load once (this
+provisions the subdomain), then re-run `npx wrangler deploy`.
+
 ## 6. Test it locally (optional but recommended)
 
 ```bash
@@ -96,23 +121,32 @@ Then, in another terminal, point the official MCP inspector at it:
 npx @modelcontextprotocol/inspector
 ```
 
-Connect to `http://localhost:8787/sse`, adding an `Authorization: Bearer
-<your MCP_AUTH_TOKEN>` header in the inspector's connection settings. You
-should see the five tools listed and be able to call them.
+Connect to `http://localhost:8787/sse`, adding an `x-api-key: <your
+MCP_AUTH_TOKEN>` header in the inspector's connection settings (just the raw
+token value, no "Bearer" prefix). You should see the five tools listed and
+be able to call them.
 
 ## 7. Connect it to Claude
 
 Add it as a custom MCP connector, pointing at:
 
 ```
-https://fantasypros-mcp.<your-subdomain>.workers.dev/sse
+https://fantasypros-mcp.<your-subdomain>.workers.dev/mcp
 ```
 
-You'll need to attach `Authorization: Bearer <your MCP_AUTH_TOKEN>` as a
-custom header on the connection. **Check what the connector-setup UI you're
-using actually supports** — some custom-connector flows only support OAuth
-or no auth at all, not an arbitrary bearer header. If that's the case here,
-your options are:
+(This is the Streamable HTTP endpoint, and the one actually used to build
+and test this project. The Worker also serves `/sse` for clients that only
+speak the older SSE transport, but `/mcp` is the one to reach for by
+default.)
+
+You'll need to attach `x-api-key: <your MCP_AUTH_TOKEN>` (just the raw token
+value, no "Bearer" prefix) as a custom header on the connection — not
+`Authorization`, which Claude's custom-connector UI reserves for its own
+OAuth flow and won't let you set as a plain header under "No sign-in" mode;
+that's why this Worker checks `x-api-key` instead. **Check what the
+connector-setup UI you're using actually supports** — some custom-connector
+flows only support OAuth or no auth at all, not an arbitrary custom header.
+If that's the case here, your options are:
 
 - Put the Worker behind **Cloudflare Access** (Zero Trust) instead of the
   in-code bearer check, and let Access handle auth at the edge.
